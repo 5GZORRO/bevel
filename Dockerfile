@@ -32,7 +32,10 @@ RUN wget https://download.java.net/java/GA/jdk14/076bab302c7b4508975440c56f6cc26
     && tar xvf openjdk-14_linux-x64_bin.tar.gz \
     && rm openjdk-14_linux-x64_bin.tar.gz
 
-
+# Install YQ
+RUN wget https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64 -O /usr/bin/yq &&\
+    chmod +x /usr/bin/yq
+    
 RUN apt-get update && apt-get install -y \
     python3-pip && \
     pip3 install --no-cache --upgrade pip setuptools wheel && \
