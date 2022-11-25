@@ -13,7 +13,8 @@ giturl=$(yq -r .network.organizations[0].gitops.git_url build/network.yaml)
 echo "Cloning git repo"
 git -C bevel/ init
 git -C bevel/ remote add origin $giturl 
-git -C bevel/ pull origin develop
+git -C bevel/ fetch
+git -C bevel/ checkout develop
 
 echo "Copy build artifacts from volume file"
 cp -r build bevel
