@@ -1,0 +1,109 @@
+apiVersion: helm.toolkit.fluxcd.io/v2beta1
+kind: HelmRelease
+metadata:
+  name: consumer-initial-registration
+  annotations:
+    fluxcd.io/automated: "false"
+  namespace: consumer-ns
+spec:
+  releaseName: consumer-initial-registration
+  interval: 1m
+  chart:
+    spec:
+      chart: platforms/r3-corda/charts/node-initial-registration
+      sourceRef:
+        kind: GitRepository
+        name: flux-dev
+        namespace: flux-dev
+  values:
+    nodeName: consumer
+    replicas: 1
+    metadata:
+      namespace: consumer-ns  
+    image:
+      containerName: ghcr.io/hyperledger/bevel-corda:4.7-linuxkit
+      initContainerName: ghcr.io/hyperledger/alpine-utils:1.0
+      imagePullSecret: regcred
+      privateCertificate: true
+      doormanCertAlias: doorman.corda.5gzorro.smartcommunitylab.it
+      networkmapCertAlias: networkmap.corda.5gzorro.smartcommunitylab.it
+    nodeConf:
+      p2p:
+        url: consumer.consumer-ns
+        port: 10002
+      ambassadorAddress: consumer.corda.5gzorro.smartcommunitylab.it:15020
+      rpcSettings:
+        useSsl: false
+        standAloneBroker: false
+        address: "0.0.0.0:10003"
+        adminAddress: "0.0.0.0:10005"
+        ssl:
+          certificatesDirectory: na-ssl-false
+          sslKeystorePath: na-ssl-false
+          trustStoreFilePath: na-ssl-false
+      legalName: O=Consumer,OU=Consumer,L=40.73/-74/New York,C=US #use peer-node level subject for legalName
+      messagingServerAddress:
+      jvmArgs:
+      systemProperties:
+      sshd:
+        port:
+      exportJMXTo:
+      transactionCacheSizeMegaBytes: 8
+      attachmentContentCacheSizeMegaBytes: 10
+       
+      detectPublicIp: false
+      database:
+        exportHibernateJMXStatistics: false
+      dbUrl: consumerdb
+      dbPort: 9101
+      dataSourceClassName: "org.h2.jdbcx.JdbcDataSource"
+      dataSourceUrl: "jdbc:h2:tcp://consumerdb:9101/persistence;DB_CLOSE_ON_EXIT=FALSE;LOCK_TIMEOUT=10000;WRITE_DELAY=100;AUTO_RECONNECT=TRUE;"
+      jarPath: "/data/corda-workspace/h2/bin"
+      networkMapURL: https://networkmap.corda.5gzorro.smartcommunitylab.it
+      doormanURL: https://doorman.corda.5gzorro.smartcommunitylab.it
+      compatibilityZoneURL:
+      jarVersion: 4.7
+      devMode: false
+      env:
+        - name: JAVA_OPTIONS
+          value: -Xmx512m
+        - name: CORDA_HOME
+          value: /opt/corda
+        - name: BASE_DIR
+          value: /base/corda
+    credentials:
+      dataSourceUser: sa
+      rpcUser:
+        - name: consumeroperations
+          permissions: [ALL]
+
+    volume:
+      baseDir: /base/corda
+    resources:
+      limits: "512Mi"
+      requests: "512Mi"
+    
+    service:
+      type: ClusterIP
+      p2p:
+        port: 10002
+        targetPort: 10002
+      rpc:
+        port: 10003
+      rpcadmin:
+        port: 10005
+
+    vault:
+      address: http://vault.5gzorro.smartcommunitylab.it:8200
+      role: vault-role
+      authpath: cordaconsumer
+      serviceaccountname: vault-auth
+      dbsecretprefix: consumer/data/credentials/database
+      rpcusersecretprefix: consumer/data/credentials/rpcusers
+      keystoresecretprefix: consumer/data/credentials/keystore
+      certsecretprefix: consumer/data/certs
+      retries: 10
+        
+    healthcheck:
+      readinesscheckinterval: 10
+      readinessthreshold: 15
