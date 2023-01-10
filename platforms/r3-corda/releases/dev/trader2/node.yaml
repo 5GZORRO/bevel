@@ -1,0 +1,136 @@
+apiVersion: helm.toolkit.fluxcd.io/v2beta1
+kind: HelmRelease
+metadata:
+  name: trader2
+  annotations:
+    fluxcd.io/automated: "false"
+  namespace: trader2-ns
+spec:
+  releaseName: trader2
+  interval: 1m
+  chart:
+    spec:
+      chart: platforms/r3-corda/charts/node
+      sourceRef:
+        kind: GitRepository
+        name: flux-dev
+        namespace: flux-dev
+  values:
+    nodeName: trader2
+    replicas: 1
+    metadata:
+      namespace: trader2-ns
+    image:
+      containerName: ghcr.io/hyperledger/bevel-corda:4.7-linuxkit
+      initContainerName: ghcr.io/hyperledger/alpine-utils:1.0
+      imagePullSecret: regcred
+      privateCertificate: true
+      doormanCertAlias: doorman.corda.5gzorro.smartcommunitylab.it
+      networkmapCertAlias: networkmap.corda.5gzorro.smartcommunitylab.it
+    nodeConf:
+      p2p:
+        url: trader2.trader2-ns
+        port: 10002
+      ambassadorAddress: trader2.corda.5gzorro.smartcommunitylab.it:15020
+      rpcSettings:
+        useSsl: false
+        standAloneBroker: false
+        address: "0.0.0.0:10003"
+        adminAddress: "0.0.0.0:10005"
+        ssl:
+          certificatesDirectory: na-ssl-false
+          sslKeystorePath: na-ssl-false
+          trustStoreFilePath: na-ssl-false
+      legalName: O=Trader2,OU=Trader2,L=51.50/-0.13/London,C=GB #use peer-node level subject for legalName
+      messagingServerAddress:
+      jvmArgs:
+      systemProperties:
+      sshd:
+        port:
+      exportJMXTo:
+      transactionCacheSizeMegaBytes: 8
+      attachmentContentCacheSizeMegaBytes: 10
+       
+      detectPublicIp: false
+      database:
+        exportHibernateJMXStatistics: false
+      dbUrl: trader2db
+      dbPort: 9101
+      dataSourceClassName: "org.h2.jdbcx.JdbcDataSource"
+      dataSourceUrl: "jdbc:h2:tcp://trader2db:9101/persistence;DB_CLOSE_ON_EXIT=FALSE;LOCK_TIMEOUT=10000;WRITE_DELAY=100;AUTO_RECONNECT=TRUE;"
+      jarPath: "/data/corda-workspace/h2/bin"
+      networkMapURL: https://networkmap.corda.5gzorro.smartcommunitylab.it
+      doormanURL: https://doorman.corda.5gzorro.smartcommunitylab.it
+      compatibilityZoneURL:
+      jarVersion: 4.7
+      devMode: false
+      env:
+        - name: JAVA_OPTIONS
+          value: -Xmx512m
+        - name: CORDA_HOME
+          value: /opt/corda
+        - name: BASE_DIR
+          value: /base/corda
+    credentials:
+      dataSourceUser: sa
+      rpcUser:
+        - name: trader2operations
+          permissions: [ALL]
+
+    cordapps:
+      getcordapps: true
+      jars:
+        - url: https://raw.githubusercontent.com/5GZORRO/bevel/develop/cordapps/5gzorro-contracts-0.1.jar
+        - url: https://raw.githubusercontent.com/5GZORRO/bevel/develop/cordapps/5gzorro-workflows-0.1.jar
+        - url: https://raw.githubusercontent.com/5GZORRO/bevel/develop/cordapps/ci-workflows-1.0.jar
+        - url: https://raw.githubusercontent.com/5GZORRO/bevel/develop/cordapps/tokens-contracts-1.1.jar
+        - url: https://raw.githubusercontent.com/5GZORRO/bevel/develop/cordapps/tokens-selection-1.1.jar
+        - url: https://raw.githubusercontent.com/5GZORRO/bevel/develop/cordapps/tokens-workflows-1.1.jar
+        
+    volume:
+      baseDir: /base/corda
+    resources:
+      limits: "1Gi"
+      requests: "1Gi" 
+    pvc:
+      name: trader2-pvc
+      annotations: {}
+      memory: 512Mi
+      storageClassName: azurestorageclass
+
+    service:
+      name: trader2
+      type: ClusterIP
+      p2p:
+        port: 10002
+        targetPort: 10002
+      rpc:
+        port: 10003
+        targetPort: 10003 
+      rpcadmin:
+        port: 10005
+        targetPort: 10005
+         
+    deployment:
+      annotations: {}
+    vault:
+      address: http://vault.5gzorro.smartcommunitylab.it:8200
+      role: vault-role
+      authpath: cordatrader2
+      serviceaccountname: vault-auth
+      dbsecretprefix: trader2/data/credentials/database
+      rpcusersecretprefix: trader2/data/credentials/rpcusers
+      keystoresecretprefix: trader2/data/credentials/keystore
+      certsecretprefix: trader2/data/certs
+      networkmapsecretprefix: trader2/data/credentials/networkmappassword
+      cordappsreposecretprefix: trader2/data/credentials/cordapps
+      retries: 10
+
+          
+    healthcheck:
+      readinesscheckinterval: 20
+      readinessthreshold: 20
+    ambassador:
+      component_name: trader2
+      external_url_suffix: corda.5gzorro.smartcommunitylab.it
+      p2p_ambassador: 15020
